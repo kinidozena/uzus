@@ -411,27 +411,31 @@ try {
 //   name, en — название по-русски и по-английски;
 //   family — группа конструкций; у группы свой цвет на плитке и на экране выдачи;
 //   need, more — начала слов, по которым она узнаётся в запросе: хотя бы одно слово
-//     из need должно быть в запросе, слова из more уточняют выбор;
+//     из need должно быть в запросе, слова из more уточняют выбор. Начала «настоящ», «прошедш»,
+//     «present», «past» оставлены только для поиска: по ним карточку находят те, кто вводит
+//     школьные названия «причастие настоящего (прошедшего) времени». На странице эти названия не выводятся.
+//     «ing» и «participle» в more отличают английские названия -ing participle clause и
+//     -ed participle clause от герундия; у герундия «ing» в more, чтобы запрос «ing» находил все три формы на -ing;
 //   signs — формальные признаки для экрана выдачи;
 //   example, word — пример для карточки и выделенное в нём слово. Эти восемь предложений
 //     взяты из базы и выбраны вручную как иллюстрации. В выдачу предложения попадают
 //     только через правила и требования.
 const CATALOG = [
   { id: 1, family: "gerund", name: "Герундий в позиции подлежащего", en: "gerund as subject",
-    need: ["герунд", "gerund", "ing"], more: ["подлежащ", "subject"],
+    need: ["герунд", "gerund", "ing"], more: ["подлежащ", "subject", "ing"],
     signs: "Форма на -ing в позиции подлежащего при глаголе-сказуемом.",
     example: "Searching the ship made me forget my fear.", word: "Searching" },
   { id: 2, family: "gerund", name: "Герундий после предлога", en: "gerund after a preposition",
-    need: ["герунд", "gerund", "ing"], more: ["предлог", "preposition"],
+    need: ["герунд", "gerund", "ing"], more: ["предлог", "preposition", "ing"],
     signs: "Форма на -ing, зависящая от предлога.",
     example: "Scott lost no time in responding to the invitation.", word: "responding" },
-  { id: 3, family: "participle", name: "Причастный оборот настоящего времени", en: "present participle clause",
-    need: ["причаст", "participle", "ing"], more: ["настоящ", "present"],
-    signs: "Форма на -ing во главе обстоятельственного или определительного оборота, без вспомогательного глагола.",
+  { id: 3, family: "participle", name: "Оборот с причастием\u00A0I", en: "-ing participle clause",
+    need: ["причаст", "participle", "ing"], more: ["i", "1", "ing", "participle", "настоящ", "present"],
+    signs: "Причастие I (форма на -ing) во главе обстоятельственного или определительного оборота, без вспомогательного глагола.",
     example: "He shook his head, watching me like I was a freak.", word: "watching" },
-  { id: 4, family: "participle", name: "Причастный оборот прошедшего времени", en: "past participle clause",
-    need: ["причаст", "participle"], more: ["прошедш", "past", "ii"],
-    signs: "Причастие прошедшего времени с зависимыми словами во главе оборота, без вспомогательного глагола.",
+  { id: 4, family: "participle", name: "Оборот с причастием\u00A0II", en: "-ed participle clause",
+    need: ["причаст", "participle"], more: ["ii", "2", "ed", "en", "participle", "прошедш", "past"],
+    signs: "Причастие II (форма на -ed, -en) с зависимыми словами во главе оборота, без вспомогательного глагола.",
     example: "Custer Pennington stood like a man turned to stone.", word: "turned" },
   { id: 5, family: "condition", name: "Сослагательное наклонение после wish", en: "subjunctive after wish",
     need: ["wish", "сослагат", "subjunctive"], more: [],
