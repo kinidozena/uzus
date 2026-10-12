@@ -107,7 +107,12 @@ input[type="checkbox"] { accent-color: var(--ink); width: 1.25rem; height: 1.25r
 
 /* Верхняя строка */
 .top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.75rem; }
-.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; }
+/* Название сервиса набрано как на превью ссылки и баннере: светлое начертание, строчные буквы.
+   Рядом пояснение; на телефоне остаются точки и название. */
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.75rem; }
+.brand svg { align-self: center; }
+.brandname { font: 300 1.875rem/1 var(--ui); letter-spacing: -0.03em; }
+.brandsub { color: var(--muted); font-size: 0.9375rem; }
 .top a { padding-block: 0.6rem; white-space: nowrap; }
 .top button { margin-left: auto; }
 
@@ -231,6 +236,7 @@ input[type="checkbox"] { accent-color: var(--ink); width: 1.25rem; height: 1.25r
   .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 1rem; }
   .top a { justify-self: start; }
   .top button { grid-area: 1 / 2 / 3 / 3; width: 2.75rem; margin: 0; padding: 0; }
+  .brandsub { display: none; }
   .top button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .hero.band { padding: 1.1rem 1.1rem 1.25rem; border-radius: 1.25rem; }
 }
@@ -263,7 +269,8 @@ try {
         <circle class="dot o-lime" cx="24" cy="10" r="8"/>
         <circle class="dot o-orange" cx="32" cy="10" r="8"/>
       </svg>
-      Сервис примеров из корпуса
+      <span class="brandname">узус</span>
+      <span class="brandsub">сервис примеров из корпуса</span>
     </span>
     <a href="#how" id="howlink">Как отобраны примеры</a>
     <button type="button" id="theme">
@@ -1194,8 +1201,6 @@ function start() {
   const labels = document.createTreeWalker($("page"), NodeFilter.SHOW_TEXT);
   while (labels.nextNode()) labels.currentNode.data = tie(labels.currentNode.data);
   write($("about"), $("about").textContent);              // пояснение из нескольких предложений
-  const brand = document.querySelector(".brand").lastChild;               // название сервиса после рисунка
-  brand.replaceWith(piece(brand.data.trim()));
   for (const label of document.querySelectorAll(".check")) {             // подписи флажков
     const text = label.lastChild;
     text.replaceWith(piece(text.data.trim()));
@@ -1210,7 +1215,7 @@ function start() {
   // Подпись кнопки следует за темой страницы, кто бы её ни сменил: кнопка или окно, в котором страница показана.
   new MutationObserver(showTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   if (typeof BAZA === "undefined") {
-    write($("name"), "Сервис примеров из корпуса");
+    write($("name"), "узус");
     write($("signs"), "Не найден файл baza.js. Он должен лежать в одной папке со страницей.");
     $("bar").hidden = true; $("note").parentElement.hidden = true;
     return;
