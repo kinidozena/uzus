@@ -3,7 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Сервис примеров Metro</title>
+<title>Узус — примеры грамматики из авторской прозы</title>
+<!-- Описание и картинка для предпросмотра ссылки (Telegram, мессенджеры, соцсети) и значок сайта.
+     Адреса картинки и страницы абсолютные: предпросмотр собирают чужие серверы. -->
+<meta name="description" content="Примеры восьми грамматических конструкций английского языка из авторской прозы: герундий, причастные обороты, условные предложения, сослагательное наклонение, инфинитив цели. У каждого предложения автор и заглавие книги.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Узус">
+<meta property="og:title" content="Грамматика английского в предложениях из авторской прозы">
+<meta property="og:description" content="14 197 примеров из 245 книг: восемь конструкций, слово-признак выделено, отобранное копируется списком для задания.">
+<meta property="og:url" content="https://kinidozena.github.io/uzus/">
+<meta property="og:image" content="https://kinidozena.github.io/uzus/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Название «узус», кольца в цветах групп конструкций и пример с выделенным герундием Searching">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
 <style>
 /* Оформление Frutiger Metro: плоские векторные формы, насыщенные цвета, гуманистический гротеск.
@@ -133,8 +151,6 @@ input[type="checkbox"] { accent-color: var(--ink); width: 1.25rem; height: 1.25r
 .drop #filename { display: block; }
 .fields { flex: 1 1 20rem; min-width: 0; display: flex; flex-wrap: wrap; align-content: center; gap: 0.5rem; }
 .fields input { flex: 1 1 9rem; min-width: 0; }
-.remote { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
-.remote a { font-weight: 600; }
 .books { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
 .books li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .books span { min-width: 0; overflow-wrap: break-word; }
@@ -337,10 +353,6 @@ try {
       </div>
     </form>
     <p class="note" id="ustatus" role="status" hidden></p>
-    <p class="note remote" id="remote" hidden>
-      <span id="remotetext"></span>
-      <a id="remotelink" target="_blank" rel="noopener">Разметить книгу на странице сервера</a>
-    </p>
     <ul class="books" id="books"></ul>
   </section>
 
@@ -1039,7 +1051,8 @@ function showOwn(open) {
 const REMOTE = ((address) => (address && !/^https?:\/\//i.test(address) ? "https://" + address : address))(
   typeof SERVER_RAZMETKI === "string" ? SERVER_RAZMETKI.trim().replace(/\/+$/, "") : "");
 // Туннель tuna на бесплатном тарифе показывает браузерам страницу «Требуется подтверждение»
-// вместо ответа программы. Этот заголовок её пропускает; server.py его разрешает (CORS).
+// вместо ответа программы. С подпиской tuna её нет. Заголовок пропускает её там, где браузер его передаёт;
+// server.py его разрешает (CORS).
 const TUNNEL = { "tuna-skip-browser-warning": "1" };
 let server = null;        // начало адреса, по которому ответил server.py ("" — адрес страницы); null — не найден
 
@@ -1061,10 +1074,8 @@ async function findServer() {
 }
 
 // Что форма принимает сейчас: книгу (сервер найден) или только готовый файл примеров.
-// Если сервер задан в nastroyki.js, но со страницы недоступен (выключен или туннель не пропускает
-// запросы с другого сайта, как бесплатный tuna), книгу размечает страница самого сервера: под формой ссылка на неё.
 const offline = () => REMOTE
-  ? "Отсюда книга не отправляется: её размечает страница сервера, ссылка ниже. Здесь принимается готовый файл примеров moya_baza.js."
+  ? "Сервер разметки книг сейчас выключен. Можно загрузить готовый файл примеров moya_baza.js или попробовать позже."
   : "Страница открыта без программы server.py: принимается готовый файл примеров moya_baza.js.";
 
 function showHint() {
@@ -1073,12 +1084,6 @@ function showHint() {
   else write($("filename"), server !== null
     ? "Книга на английском: .txt или .epub, до 5 МБ. Сервер файл не сохраняет, примеры остаются в этом браузере."
     : offline());
-  const remote = Boolean(REMOTE) && server === null;
-  $("remote").hidden = !remote;
-  if (remote) {
-    $("remotelink").href = REMOTE + "/";
-    write($("remotetext"), "Страница сервера работает, пока включён компьютер с программой server.py. При первом входе tuna попросит нажать «Посетить».");
-  }
 }
 
 function addBooks(list) {
@@ -1114,7 +1119,7 @@ async function sendFile(event) {
   if (server === null) {                      // сервер могли включить после открытия страницы
     tell("Проверяется сервер разметки…");
     if (!(await findServer())) {
-      tell(REMOTE ? "Книгу размечает страница сервера: откройте ссылку ниже. Здесь принимается только готовый файл примеров moya_baza.js."
+      tell(REMOTE ? "Сервер разметки книг сейчас выключен. Попробуйте позже или загрузите готовый файл примеров moya_baza.js."
         : "Книгу размечает программа server.py, а страница открыта без неё. Запустите server.py и откройте http://localhost:8000 либо загрузите готовый файл moya_baza.js.");
       $("send").disabled = false;
       return;
