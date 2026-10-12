@@ -1,0 +1,1229 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сервис примеров Metro</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Оформление Frutiger Metro: плоские векторные формы, насыщенные цвета, гуманистический гротеск.
+   Компоновка та же, что в основном прототипе: каталог из восьми плиток и выдача с панелью «Для задания».
+   Цвет несёт смысл: у каждой группы конструкций свой цвет (герундий, причастные обороты,
+   условные и сослагательное, инфинитив); он переходит с плитки на экран выдачи.
+   Шрифт один — Noto Sans (лицензия SIL Open Font License 1.1); заголовки экранов набраны светлым
+   начертанием со строчной буквы. Управление — чёрные «таблетки»; украшение одно: кольца и лента в шапке.
+   Цвета заданы один раз для светлой темы и один раз для тёмной (второй блок повторён:
+   для тёмной темы системы и для тёмной темы, выбранной кнопкой). Цвета групп в обеих темах одни. */
+:root {
+  --bg: #ffffff; --surface: #ffffff; --soft: #f1f3f7; --hover: #e6e9f0; --ink: #14161c; --on-ink: #ffffff;
+  --muted: #4c5364; --line: #dfe3ea;
+  --cyan: #22b8f0; --lime: #a4d82c; --pink: #ff6fb0; --orange: #ff9a24;      /* цвета групп конструкций */
+  --tile-ink: #14161c; --tile-paper: #ffffff;                                 /* текст и вставки на цвете группы */
+  --hue: var(--cyan); --share: 14%; --blend: multiply;
+  --ui: "Noto Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1116; --surface: #191c24; --soft: #191c24; --hover: #2a2f3a; --ink: #eef0f5; --on-ink: #14161c;
+    --muted: #aab1c0; --line: #2a2f3a; --share: 20%; --blend: screen; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1116; --surface: #191c24; --soft: #191c24; --hover: #2a2f3a; --ink: #eef0f5; --on-ink: #14161c;
+  --muted: #aab1c0; --line: #2a2f3a; --share: 20%; --blend: screen; color-scheme: dark;
+}
+/* Цвет группы: его получают плитка каталога и весь экран выдачи */
+[data-family="gerund"] { --hue: var(--cyan); }
+[data-family="participle"] { --hue: var(--lime); }
+[data-family="condition"] { --hue: var(--pink); }
+[data-family="infinitive"] { --hue: var(--orange); }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+/* Переносы строк. Слова на слоги не делятся. Подписи кнопок и ссылки шапки стоят в одну строку.
+   Остальной текст делится на строки по смыслу (функции write, fill и lay в скрипте). Предложение
+   подписи, заглавие книги и английский пример — блок строки (класс s): блок, который помещается
+   в строку, переносится целиком, длинный блок делится между группами слов (класс w) в лучших
+   местах; разрыв перед группой ставит класс nl. Запрещённые разрывы снимает функция tie(). */
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 1rem/1.5 var(--ui); text-wrap: pretty; }
+.page { max-width: 72rem; margin-inline: auto; padding-inline: clamp(1rem, 4vw, 2.5rem); padding-block: 1rem 4rem;
+        display: flex; flex-direction: column; gap: 1.5rem; }
+h1, h2, p, ol, ul { margin: 0; }
+h1 { font: 300 clamp(2.125rem, 1.35rem + 3.2vw, 3.25rem)/1.06 var(--ui); letter-spacing: -0.02em; text-wrap: balance; }
+h1:focus { outline: none; }
+h2 { font: 700 1.125rem/1.3 var(--ui); }
+a { color: var(--ink); text-underline-offset: 0.15em; }
+mark { background: var(--hue); color: var(--tile-ink); border-radius: 0.375rem; padding: 0 0.3em; }
+svg { flex: none; }
+.muted { color: var(--muted); }
+.s { display: inline-block; max-width: 100%; vertical-align: top; }
+.w.nl::before { content: "\A"; white-space: pre; }
+.s.many { display: block; }
+.s.flat { white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/* Управление. Три вида кнопок: главная (заливка), обычная (контур), ссылка (подчёркнутый текст).
+   Поля и кнопки — «таблетки» с контуром в два пикселя, высота не меньше 44 пикселей. */
+input[type="search"], input[type="text"], select, button, .filebtn {
+  font: 600 1rem/1.2 var(--ui); color: var(--ink); background: var(--surface);
+  border: 2px solid var(--ink); border-radius: 999px; min-height: 2.75rem; padding: 0 1.1rem; }
+input[type="search"], input[type="text"] { font-weight: 400; }
+::placeholder { color: var(--muted); opacity: 1; }
+button, .filebtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; white-space: nowrap; }
+select { cursor: pointer; padding-right: 0.6rem; }
+button:not(:disabled):hover, .filebtn:hover, select:hover { background: var(--hover); }
+button:disabled { cursor: default; opacity: 0.5; }
+button.main { background: var(--ink); color: var(--on-ink); }
+button.main:not(:disabled):hover { background: var(--ink); opacity: 0.86; }
+button.link { padding: 0; border: 0; border-radius: 0; background: none; text-decoration: underline; text-underline-offset: 0.15em; }
+button.link:not(:disabled):hover { background: none; }
+input[type="checkbox"] { accent-color: var(--ink); width: 1.25rem; height: 1.25rem; margin: 0; flex: none; }
+.check { display: inline-flex; align-items: center; gap: 0.6rem; min-height: 2.75rem; cursor: pointer; text-wrap: balance; }
+
+/* Рисунки: кольца и точки цвета группы. В светлой теме наложения темнеют, как краски в печати, в тёмной светлеют. */
+.o-cyan { --c: var(--cyan); } .o-pink { --c: var(--pink); } .o-lime { --c: var(--lime); } .o-orange { --c: var(--orange); }
+.ring { fill: none; stroke: var(--c); mix-blend-mode: var(--blend); }
+.dot { fill: var(--c); mix-blend-mode: var(--blend); }
+.rings { color: var(--tile-paper); opacity: 0.38; pointer-events: none; }
+
+/* Верхняя строка */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.75rem; }
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; }
+.top a { padding-block: 0.6rem; white-space: nowrap; }
+.top button { margin-left: auto; }
+
+/* Шапка. В каталоге: заголовок и поиск слева, рисунок справа. В выдаче: полоса цвета группы. */
+.hero { display: grid; grid-template-columns: minmax(0, 40rem) minmax(0, 1fr); gap: 1rem 2rem; }
+.hero-text { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.head { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.lead { color: var(--muted); font-size: 1.0625rem; max-width: 40rem; text-wrap: pretty; }
+.ornament { position: relative; min-height: 7rem; }
+.ornament svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero > .rings { display: none; }
+.hero.band { display: block; position: relative; overflow: hidden; padding: 1.4rem 1.6rem 1.6rem; border-radius: 1.5rem;
+             background: var(--hue); color: var(--tile-ink); }
+.hero.band > .rings { display: block; position: absolute; right: -5.25rem; top: -4rem; width: 21rem; height: 21rem; }
+.hero.band .hero-text { position: relative; max-width: 42rem; }
+.hero.band .lead { color: var(--tile-ink); }
+.hero.band #back { background: var(--tile-paper); color: var(--tile-ink); border-color: var(--tile-ink); padding-left: 0.7rem; }
+.hero.band #back:hover { opacity: 0.86; }
+.hero.band :focus-visible { outline-color: var(--tile-ink); }
+
+/* Поиск и строка настроек. Под полем оставлено место для одной строки с ответом поиска. */
+.search { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: -0.5rem; }
+.field { position: relative; display: block; }
+.field svg { position: absolute; left: 1.2rem; top: 50%; translate: 0 -50%; pointer-events: none; }
+.field input { width: 100%; min-height: 3.375rem; padding-left: 3.1rem; font-size: 1.0625rem; }
+.status { min-height: 1.5em; padding-left: 1.2rem; color: var(--muted); font-size: 0.9375rem; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.25rem; }
+.pair { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--muted); }
+.count { margin-left: auto; color: var(--muted); }
+.note { background: var(--bg); border-radius: 0.75rem; padding: 0.7rem 0.9rem; }
+
+/* Своя книга */
+.own { display: flex; flex-direction: column; gap: 0.75rem; background: var(--soft); border-radius: 1.25rem; padding: 1rem; }
+.upload { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.drop { flex: 1 1 20rem; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.35rem;
+        border: 2px dashed var(--ink); border-radius: 1rem; padding: 0.8rem 1rem; }
+.drop.over { background: var(--hover); }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop input:focus-visible + p .filebtn { outline: 2px solid var(--ink); outline-offset: 3px; }
+.drop p { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; overflow-wrap: break-word; }
+.drop #filename { display: block; }
+.fields { flex: 1 1 20rem; min-width: 0; display: flex; flex-wrap: wrap; align-content: center; gap: 0.5rem; }
+.fields input { flex: 1 1 9rem; min-width: 0; }
+.books { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.books li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.books span { min-width: 0; overflow-wrap: break-word; }
+
+/* Каталог: плитка цвета своей группы — название, пример, число примеров.
+   Число прижато к низу плитки, поэтому в одном ряду числа стоят на одной линии. */
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.875rem; }
+.card { position: relative; overflow: hidden; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0.375rem;
+        min-height: 8.5rem; padding: 1.1rem 1.4rem; border: 0; border-radius: 1.25rem; background: var(--hue); color: var(--tile-ink);
+        text-align: left; font-weight: 400; line-height: 1.45; white-space: normal; }
+.card:not(:disabled):hover { background: var(--hue); box-shadow: inset 0 0 0 3px var(--tile-ink); }
+.card:disabled { background: var(--line); }
+.card:disabled .rings { display: none; }
+.card .rings { position: absolute; right: -2.75rem; bottom: -3.6rem; width: 10.6rem; height: 10.6rem; }
+.card span { position: relative; }
+.card .t { font: 700 1.25rem/1.25 var(--ui); text-wrap: balance; }
+.card .ex { margin-bottom: 0.375rem; font-size: 1.125rem; }
+.card mark { background: var(--tile-paper); }
+.card .n { align-self: flex-start; margin-top: auto; padding: 0.25rem 0.75rem; border-radius: 999px;
+           background: var(--tile-ink); color: var(--tile-paper); font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+
+/* Выдача: список и панель «Для задания». Опорное слово и отмеченные строки окрашены в цвет группы. */
+.work { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 2rem; align-items: start; }
+.list { list-style: none; padding: 0; border-top: 1px solid var(--line); }
+.list li { padding: 0.9rem 0.75rem; border-bottom: 1px solid var(--line); }
+.list li:has(input:checked) { background: var(--soft); background: color-mix(in srgb, var(--hue) var(--share), var(--bg)); }
+.pick { display: flex; align-items: flex-start; gap: 0.875rem; cursor: pointer; }
+.pick input { margin-top: 0.4rem; }
+.sentence { font-size: 1.3125rem; line-height: 1.5; overflow-wrap: break-word; }
+.source { margin: 0.25rem 0 0 2.125rem; color: var(--muted); font-size: 0.875rem; overflow-wrap: break-word; }
+.source cite { font-style: italic; }
+.source a { font-weight: 600; white-space: nowrap; }
+.work > div > button { margin-top: 1rem; }
+.panel { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;
+         background: var(--soft); border-radius: 1.25rem; padding: 1.25rem; }
+.panel-head { display: flex; align-items: center; gap: 0.75rem; }
+.panel-head div { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 0.75rem; }
+.panel-head h2, .panel-head span { white-space: nowrap; }
+.panel-head button { display: none; }
+.panel-body { display: flex; flex-direction: column; gap: 0.25rem; }
+.chosen { margin-bottom: 0.5rem; padding-left: 1.4rem; display: flex; flex-direction: column; max-height: 40vh; overflow: auto; }
+.chosen div { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.25rem; }
+.chosen span { min-width: 0; overflow-wrap: break-word; padding-block: 0.55rem; }
+.chosen button { flex: none; min-width: 2.75rem; padding: 0; border-color: transparent; background: none;
+                 color: var(--muted); font-size: 1.25rem; font-weight: 400; }
+.actions { display: flex; gap: 0.6rem; }
+.actions .main { flex: 1; }
+.copybox { width: 100%; min-height: 8rem; font: 0.875rem/1.4 var(--ui); color: var(--ink); background: var(--bg);
+           border: 2px solid var(--ink); border-radius: 0.75rem; padding: 0.6rem; }
+
+/* Как отобраны примеры */
+.how { border-top: 2px solid var(--ink); }
+.how summary { cursor: pointer; padding-block: 1rem; font-weight: 600; }
+.how div { display: flex; flex-direction: column; gap: 0.75rem; max-width: 40rem; padding-bottom: 1rem; }
+.steps { list-style: none; padding: 0; }
+.steps li { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-block: 0.4rem; }
+.steps span { min-width: 0; }
+.steps small { display: block; color: var(--muted); font-size: 0.875rem; }
+.steps b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Узкий экран: рисунок уходит под поиск, панель «Для задания» прижата к низу и свёрнута,
+   плитки в один столбец, на телефоне у кнопки темы остаётся значок */
+@media (max-width: 58rem) {
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .ornament { min-height: 6.5rem; }
+  .work { grid-template-columns: minmax(0, 1fr); }
+  .panel { top: auto; bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)); border: 2px solid var(--ink);
+           box-shadow: 0 0.25rem 1.5rem rgb(0 0 0 / 0.25); }
+  .panel:not(.open) .panel-body, .panel:not(.open) #clear { display: none; }
+  .panel-head button { display: inline-flex; }
+  .count { margin-left: 0; }
+}
+@media (max-width: 46rem) {
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .sentence { font-size: 1.1875rem; }
+}
+@media (max-width: 30rem) {
+  .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 1rem; }
+  .top a { justify-self: start; }
+  .top button { grid-area: 1 / 2 / 3 / 3; width: 2.75rem; margin: 0; padding: 0; }
+  .top button span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hero.band { padding: 1.1rem 1.1rem 1.25rem; border-radius: 1.25rem; }
+}
+</style>
+<script>
+// Тема, выбранная кнопкой на странице, запоминается в браузере и применяется до показа страницы.
+try {
+  const saved = localStorage.getItem("tema");
+  if (saved === "dark" || saved === "light") document.documentElement.dataset.theme = saved;
+} catch (error) { /* память браузера недоступна: тема берётся из системы */ }
+</script>
+
+</head>
+<body>
+<!-- Кольца для плиток и полосы заголовка: рисунок описан один раз и вставляется по ссылке -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <symbol id="rings" viewBox="0 0 170 170">
+    <circle cx="85" cy="85" r="74" fill="none" stroke="currentColor" stroke-width="16"/>
+    <circle cx="85" cy="85" r="44" fill="none" stroke="currentColor" stroke-width="14"/>
+    <circle cx="85" cy="85" r="15" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<div class="page" id="page" lang="ru">
+  <header class="top">
+    <span class="brand">
+      <svg width="40" height="20" viewBox="0 0 40 20" aria-hidden="true">
+        <circle class="dot o-cyan" cx="8" cy="10" r="8"/>
+        <circle class="dot o-pink" cx="16" cy="10" r="8"/>
+        <circle class="dot o-lime" cx="24" cy="10" r="8"/>
+        <circle class="dot o-orange" cx="32" cy="10" r="8"/>
+      </svg>
+      Сервис примеров из корпуса
+    </span>
+    <a href="#how" id="howlink">Как отобраны примеры</a>
+    <button type="button" id="theme">
+      <svg id="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg id="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <span id="themename"></span>
+    </button>
+  </header>
+
+  <div class="hero" id="hero">
+    <svg class="rings" aria-hidden="true"><use href="#rings"/></svg>
+    <div class="hero-text">
+      <div class="head">
+        <button type="button" id="back" data-view="result" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          Каталог
+        </button>
+        <h1 id="name" tabindex="-1"></h1>
+        <p class="lead" id="signs"></p>
+      </div>
+      <div class="search" data-view="catalog">
+        <label class="field">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+          <input id="query" type="search" autocomplete="off" aria-label="Название конструкции" placeholder="wish, герундий, second conditional">
+        </label>
+        <p class="status" id="note" role="status"></p>
+      </div>
+    </div>
+    <div class="ornament" data-view="catalog" aria-hidden="true">
+      <svg viewBox="0 0 400 240" preserveAspectRatio="xMaxYMid meet">
+        <path class="ring o-orange" d="M10 214 C 86 154, 150 246, 250 206 S 366 152, 390 176" stroke-width="12" stroke-linecap="round"/>
+        <g class="o-cyan">
+          <circle class="ring" cx="278" cy="112" r="94" stroke-width="22"/>
+          <circle class="ring" cx="278" cy="112" r="56" stroke-width="18"/>
+          <circle class="dot" cx="278" cy="112" r="22"/>
+        </g>
+        <g class="o-pink">
+          <circle class="ring" cx="166" cy="146" r="64" stroke-width="18"/>
+          <circle class="ring" cx="166" cy="146" r="33" stroke-width="14"/>
+          <circle class="dot" cx="166" cy="146" r="10"/>
+        </g>
+        <g class="o-lime">
+          <circle class="ring" cx="350" cy="50" r="38" stroke-width="16"/>
+          <circle class="dot" cx="350" cy="50" r="12"/>
+        </g>
+        <g class="o-orange">
+          <circle class="dot" cx="92" cy="40" r="15"/>
+          <circle class="dot" cx="60" cy="66" r="11"/>
+          <circle class="dot" cx="38" cy="96" r="8"/>
+          <circle class="dot" cx="26" cy="126" r="5.5"/>
+          <circle class="dot" cx="22" cy="152" r="3.5"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="bar" id="bar">
+    <label class="pair">Источник <select id="source"></select></label>
+    <label class="pair" id="genrebox" hidden>Тексты
+      <select id="genre">
+        <option value="">все</option>
+        <option value="fiction">художественные</option>
+        <option value="nonfiction">нехудожественные</option>
+      </select>
+    </label>
+    <label class="check" data-view="result" hidden title="Среди первых трёх слов нет местоимения he, she, it, they, this, that, перед которым не стоит существительное">
+      <input type="checkbox" id="context" checked> Только понятные без контекста
+    </label>
+    <button type="button" class="main" id="ownbutton" data-view="catalog" aria-expanded="false" aria-controls="own">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span id="ownname">Добавить свою книгу</span>
+    </button>
+    <span class="count" id="count" data-view="result" aria-live="polite" hidden></span>
+  </div>
+
+  <section class="own" id="own" aria-label="Своя книга" hidden>
+    <form class="upload" id="upload">
+      <div class="drop" id="drop">
+        <input id="file" type="file" accept=".txt,.epub,.js,.json" aria-label="Файл книги (.txt, .epub) или файл примеров moya_baza.js">
+        <p><label class="filebtn" for="file">Выбрать файл</label> <span>или перетащите его сюда</span></p>
+        <p class="muted" id="filename"></p>
+      </div>
+      <div class="fields">
+        <input id="author" type="text" autocomplete="off" placeholder="Автор" aria-label="Автор">
+        <input id="title" type="text" autocomplete="off" placeholder="Заглавие" aria-label="Заглавие">
+        <button class="main" type="submit" id="send">Добавить</button>
+      </div>
+    </form>
+    <p class="note" id="ustatus" role="status" hidden></p>
+    <ul class="books" id="books"></ul>
+  </section>
+
+  <div class="cards" id="cards" data-view="catalog"></div>
+
+  <div class="work" data-view="result" hidden>
+    <div>
+      <ul class="list" id="list"></ul>
+      <button type="button" id="more"></button>
+    </div>
+    <aside class="panel" id="panel" aria-label="Для задания">
+      <div class="panel-head">
+        <div>
+          <h2>Для задания</h2>
+          <span class="muted" id="chosencount"></span>
+        </div>
+        <button type="button" class="link" id="toggle" aria-expanded="false">Показать</button>
+      </div>
+      <div class="panel-body">
+        <p class="muted" id="emptyhint"></p>
+        <ol class="chosen" id="chosen"></ol>
+        <label class="check"><input type="checkbox" id="gap"> Заменить выделенное слово пропуском</label>
+        <label class="check"><input type="checkbox" id="credit" checked> Указать автора и заглавие</label>
+      </div>
+      <div class="actions">
+        <button type="button" class="main" id="copy">Скопировать</button>
+        <button type="button" id="clear">Очистить</button>
+      </div>
+      <textarea class="copybox" id="copybox" aria-label="Список для копирования" readonly hidden></textarea>
+    </aside>
+  </div>
+
+  <details class="how" id="how">
+    <summary>Как отобраны примеры</summary>
+    <div>
+      <p class="muted" id="pathfor"></p>
+      <ol class="steps" id="steps"></ol>
+      <p class="muted" id="about">В каждом предложении выделено слово, по которому правило узнало конструкцию. Предложения взяты из книг дословно; у текстов корпуса книга открывается по ссылке рядом с примером. Конструкции найдены правилами по автоматической разметке анализатора spaCy. Разметка содержит ошибки, поэтому в выдаче может встретиться предложение без заданной конструкции.</p>
+      <p class="muted" id="built"></p>
+    </div>
+  </details>
+</div>
+
+<script src="baza.js"></script>
+<script src="moya_baza.js"></script>
+<script src="nastroyki.js"></script>
+<script>
+// Каталог конструкций. У каждой конструкции:
+//   name, en — название по-русски и по-английски;
+//   family — группа конструкций; у группы свой цвет на плитке и на экране выдачи;
+//   need, more — начала слов, по которым она узнаётся в запросе: хотя бы одно слово
+//     из need должно быть в запросе, слова из more уточняют выбор;
+//   signs — формальные признаки для экрана выдачи;
+//   example, word — пример для карточки и выделенное в нём слово. Эти восемь предложений
+//     взяты из базы и выбраны вручную как иллюстрации. В выдачу предложения попадают
+//     только через правила и требования.
+const CATALOG = [
+  { id: 1, family: "gerund", name: "Герундий в позиции подлежащего", en: "gerund as subject",
+    need: ["герунд", "gerund", "ing"], more: ["подлежащ", "subject"],
+    signs: "Форма на -ing в позиции подлежащего при глаголе-сказуемом.",
+    example: "Searching the ship made me forget my fear.", word: "Searching" },
+  { id: 2, family: "gerund", name: "Герундий после предлога", en: "gerund after a preposition",
+    need: ["герунд", "gerund", "ing"], more: ["предлог", "preposition"],
+    signs: "Форма на -ing, зависящая от предлога.",
+    example: "Scott lost no time in responding to the invitation.", word: "responding" },
+  { id: 3, family: "participle", name: "Причастный оборот настоящего времени", en: "present participle clause",
+    need: ["причаст", "participle", "ing"], more: ["настоящ", "present"],
+    signs: "Форма на -ing во главе обстоятельственного или определительного оборота, без вспомогательного глагола.",
+    example: "He shook his head, watching me like I was a freak.", word: "watching" },
+  { id: 4, family: "participle", name: "Причастный оборот прошедшего времени", en: "past participle clause",
+    need: ["причаст", "participle"], more: ["прошедш", "past", "ii"],
+    signs: "Причастие прошедшего времени с зависимыми словами во главе оборота, без вспомогательного глагола.",
+    example: "Custer Pennington stood like a man turned to stone.", word: "turned" },
+  { id: 5, family: "condition", name: "Сослагательное наклонение после wish", en: "subjunctive after wish",
+    need: ["wish", "сослагат", "subjunctive"], more: [],
+    signs: "Глагол wish и придаточное со сказуемым в прошедшем времени либо с would, could, might, have.",
+    example: "I wish I could believe that you do love me.", word: "wish" },
+  { id: 6, family: "condition", name: "Условное предложение II типа", en: "second conditional",
+    need: ["условн", "conditional", "if"], more: ["втор", "ii", "2", "second"],
+    signs: "Придаточное с if и сказуемым в прошедшем времени; в главной части would, could или might.",
+    example: "What would he do, if Mary told him?", word: "told" },
+  { id: 7, family: "condition", name: "Бессоюзная инверсия в условном предложении", en: "inverted conditional",
+    need: ["условн", "conditional", "инверс", "inver", "бессоюз"], more: ["инверс", "inver", "бессоюз", "had", "were", "should"],
+    signs: "Придаточное без союза, которое начинается с had, were или should перед подлежащим.",
+    example: "Had she lived, I think she would have looked like you.", word: "lived" },
+  { id: 8, family: "infinitive", name: "Инфинитив цели", en: "infinitive of purpose",
+    need: ["инфинитив", "infinitive", "цел", "purpose"], more: ["цел", "purpose"],
+    signs: "Инфинитив с to в роли обстоятельства цели; обороты in order to, so as to.",
+    example: "I strained every nerve to help him.", word: "help" },
+];
+
+const $ = (id) => document.getElementById(id);
+const number = (n) => n.toLocaleString("ru-RU");
+// Форма слова после числа: 1 пример, 2 примера, 5 примеров.
+const plural = (n, one, few, many) =>
+  n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
+const examplesWord = (n) => `${number(n)}${NBSP}${plural(n, "пример", "примера", "примеров")}`;
+const sentencesWord = (n) => `${n}${NBSP}${plural(n, "предложение", "предложения", "предложений")}`;
+const dot = (text) => (/[.!?]$/.test(text) ? text : text + ".");      // точка в конце, если её нет
+
+// Правила переноса строк в подписях интерфейса. Слова на слоги не делятся; неразрывный пробел
+// не даёт разорвать строку там, где это запрещено правилами набора русского текста:
+//   1) предлог, союз (до трёх букв) и частицы не, ни не остаются в конце строки;
+//   2) частицы бы, ли, же и тире не начинают строку;
+//   3) число не отрывается от слова, к которому относится (246 книг, II типа), и не делится на части (10 000);
+//   4) инициалы не отрываются от фамилии и друг от друга;
+//   5) дефис в начале слова (-ing) не остаётся в конце строки.
+// Предложения и заглавия книг через функцию не проходят: они показываются дословно.
+const NBSP = "\u00A0";
+const SHORT = "в|во|к|ко|с|со|у|о|об|обо|от|ото|до|из|изо|на|за|по|под|над|при|про|для|без|и|а|но|да|или|что|как|чем|не|ни";
+const TIES = [
+  [new RegExp(`(?<![\\p{L}\\p{N}-])(${SHORT})\\s+(?=\\S)`, "giu"), "$1" + NBSP],                    // 1
+  [/\s+(?=(?:бы|б|же|ж|ли|ль)(?![\p{L}\p{N}-])|—)/giu, NBSP],                                     // 2
+  [/(?<=(?:^|[\s(«])(?:\d[\d\u00A0]*|[IVXLC]+))\s+(?=[\p{L}\d])/gu, NBSP],                         // 3
+  [/(?<=\p{L},?)\s+(?=\p{Lu}\.)|(?<=(?<!\p{L})\p{Lu}\.)\s+(?=\p{Lu})/gu, NBSP],                    // 4
+  [/(?<=(?:^|\s)-)(?=\p{L})/gu, "\u2060"],                                                          // 5
+];
+const tie = (text) => TIES.reduce((result, [pattern, glue]) => result.replace(pattern, glue), text);
+
+// ---------- Разбивка на строки по смыслу ----------
+// Подписи, пояснения и английские примеры делятся на строки по смыслу, как многострочные
+// заголовки и подписи в книжном наборе: строка рвётся на границе смысловой группы.
+// Текст делится на группы слов, внутри которых разрыв запрещён (span class="w"). У каждой группы
+// записан штраф за разрыв строки перед ней (data-cost); чем он меньше, тем лучше место:
+//   0 — между предложениями;
+//   1 — после точки с запятой, двоеточия, тире;
+//   2 — после запятой;
+//   3 — перед союзом или союзным словом (and, because, which; что, если, поэтому), скобкой, кавычкой;
+//   4 — перед предлогом и перед вспомогательным или модальным глаголом в начале сказуемого
+//       (…on the shoulder | would be equivalent…); перед of — 5;
+//   8 — между любыми другими словами;
+//  14 — после местоимения-подлежащего, вспомогательного глагола, частицы not, прилагательного
+//       (he | knew, would | be, a greater | opportunity),
+//       перед частицей фразового глагола (give | up) и внутри имени из нескольких слов с прописной буквы
+//       (Hunter | Committee): так строка рвётся, только если иначе не помещается.
+// Артикли, предлоги, союзы и сокращения вроде Mr. в конце строки не остаются никогда.
+// Из раскладок, при которых все строки помещаются по ширине, выбирается та, у которой меньше сумма:
+// штрафы за разрывы, неровность строк (строки близкой длины лучше), штраф за одно слово в последней
+// строке и за короткий обрывок оборота у края строки (…не сохраняет, примеры | остаются…).
+// Текст, который помещается в одну строку, не делится.
+const set = (list) => new Set(list.split(/\s+/).filter(Boolean));
+// Слова, после которых разрыв запрещён всегда.
+const KEEP = set(`a an the my your his its our their these those every each either neither no
+  any another some several many much few all both
+  two three four five six seven eight nine ten eleven twelve twenty thirty forty fifty hundred thousand million
+  and or nor but because although though if unless whether while whilst lest when whenever where wherever that
+  who whom whose which what whatever why how who's what's here's where's as than like
+  to of at for with from into onto upon among amongst between within without during toward towards throughout against despite except via per
+  mr. mrs. ms. dr. st. mt. messrs. capt. col. gen. lieut. rev. prof. hon. sgt.
+  перед через между после около вокруг вместо кроме среди против сквозь ради вдоль возле мимо внутри вне
+  чтобы если когда пока хотя либо поэтому потому где куда откуда самых самый самая самое самые самым самой
+  который которая которое которые которого которой которому которым котором которых которыми
+  этот эта эти этом этой этого этих этим этими этому тот та те том той того тех тем теми
+  свой своя своё свои своего своей своих своим своими весь вся всё все всех всем всеми
+  каждый каждая каждое каждые каждого каждой каждом каждым`);
+// Слова, после которых разрыв нежелателен (штраф 14), если дальше не начинается новая группа (союз или предлог):
+// местоимения-подлежащие, вспомогательные и модальные глаголы, not, слова степени.
+const LEAN = set(`i you he she it we they there one i'm you're he's she's it's we're they're i've you've we've they've
+  i'll you'll he'll she'll it'll we'll they'll i'd you'd he'd she'd we'd they'd there's that's
+  am is are was were be been being have has had do does did will would shall should can could may might must ought
+  isn't aren't wasn't weren't haven't hasn't hadn't don't doesn't didn't won't wouldn't shan't shouldn't can't cannot couldn't
+  not never very too so quite rather more most less least this such`);
+// Слова двух прочтений: her (притяжательное или дополнение), наречные предлоги (through the door и came through).
+// Разрыв после них нежелателен, если дальше не союз, не предлог и не вспомогательный глагол (…came through | was…).
+const OPEN = set(`her in on up out off down over back about around along past by through before after since till until inside outside near
+  below above behind across beyond under underneath beneath beside besides`);
+// Союзы и союзные слова: перед ними хорошее место для разрыва.
+const CONJ = set(`and or nor but because although though if unless whether while whilst when whenever where wherever
+  that which who whom whose why how lest until till
+  и а но да или либо что чтобы как если когда пока хотя поэтому потому где куда откуда
+  который которая которое которые которого которой которому которым котором которых которыми`);
+// Предлоги: перед ними место для разрыва лучше, чем между другими словами.
+const PREP = set(`in on at by for with from to of into onto upon about above across after against along among amongst around as before
+  behind below beneath beside besides between beyond despite during except inside like near off outside over past since than through
+  throughout toward towards under underneath unlike via within without
+  в во к ко с со у о об обо от ото до из изо на за по под над при про для без перед через между после около вокруг вместо
+  кроме среди против сквозь ради вдоль возле мимо внутри вне`);
+// Вспомогательные и модальные глаголы: с них начинается сказуемое после подлежащего-существительного.
+const VERB = set(`am is are was were have has had do does did will would shall should can could may might must
+  isn't aren't wasn't weren't haven't hasn't hadn't don't doesn't didn't won't wouldn't shan't shouldn't can't cannot couldn't`);
+// Прилагательные: отрыв от следующего слова нежелателен (a greater | opportunity). Английские — частые
+// по списку и по суффиксам -ous, -ful, -less, -able, -ible, -ical; русские — по окончаниям полных прилагательных.
+const ADJ = set(`good great little old young new long small large big high low whole own other same last first next
+  white black red green blue brown grey gray yellow dark light poor rich real true full free dear fine open sure strange
+  short wide deep cold warm hot dry wet hard soft heavy pretty ugly happy sad glad kind gentle quiet loud bright clean
+  dirty clear plain simple easy difficult common rare early late recent ancient modern important necessary certain
+  particular special general public private personal social natural human local foreign national royal civil military
+  english french german british american indian chinese russian italian spanish strong weak sharp thick thin fat broad
+  narrow flat empty single double main chief entire complete perfect bad evil wicked wise foolish stupid clever brave
+  proud noble humble honest serious funny sweet bitter fresh tired sick ill dead alive wild safe slight slow quick fast
+  swift silent sudden various several following previous present future greater greatest better best worse worst older
+  oldest younger youngest larger largest smaller smallest higher highest lower longer shorter`);
+const adjective = (word) => ADJ.has(word) || /^[a-z]{3,}(?:ous|ful|less|able|ible|ical)$/.test(word)
+  || /^\p{Script=Cyrillic}{2,}(?:ый|ая|яя|ые|ых|ого|его|ому|ему|ым|ую|юю)$/u.test(word)
+  || /^\p{Script=Cyrillic}{4,}(?:ой|ое)$/u.test(word);
+// Частицы фразовых глаголов: отрыв от глагола нежелателен (give up, set out).
+const PARTICLE = set("up out off down away back apart aside forth together");
+// Устойчивые обороты, внутри которых строка не рвётся.
+const PHRASES = ["in order to", "so as to", "so as not to", "not to", "as well as", "as soon as", "as long as", "as far as",
+  "as if", "as though", "even if", "even though", "so that", "such as", "because of", "instead of", "in spite of", "out of",
+  "rather than", "according to", "due to", "in front of", "on account of", "up and down", "back and forth", "more or less",
+  "sooner or later", "now and then", "have to", "has to", "had to", "ought to", "used to", "going to"].map((phrase) => phrase.split(" "));
+// Цепочка вспомогательных глаголов не рвётся: would have, had been, was not.
+const CHAIN = set("have has had be been being not never");
+// Относительные слова после предлога: in which, by whom, for whose sake, in that manner.
+const RELATIVE = set("which whom whose what whatever that");
+
+// Слово без кавычек и знаков вокруг, строчными буквами (точку сокращения оставляет: mr.).
+const bare = (word) => word.toLowerCase().replace(/’/g, "'").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}'.]+$/gu, "");
+
+// Штраф за разрыв строки между словами prev и word; Infinity — разрыв запрещён.
+// Слова, связанные функцией tie() неразрывным пробелом, уже стоят вместе: берётся их край.
+function cost(prev, word) {
+  const last = prev.split(NBSP).pop(), first = word.split(NBSP)[0];
+  const end = last.replace(/["'”’»)\]]+$/u, "").slice(-1);        // знак в конце слова без закрывающих кавычек и скобок
+  const before = bare(last.split(/--|—/u).pop()), after = bare(first.split(/--|—/u)[0]);   // слово после тире без пробелов: woman--for
+  if (/^[—–-]$/u.test(first) || /^[^\p{L}\p{N}(«"“‘]+$/u.test(first)) return Infinity;   // тире и знаки препинания не начинают строку
+  if (/[—–]$/u.test(last)) return 1;
+  if (/[.!?…]/u.test(end)) {
+    const initial = /^\p{Lu}\.$/u.test(last);
+    if (KEEP.has(before) || (initial && /^\p{Lu}/u.test(first))) return Infinity;   // Mr. Smith, J. J. Smith
+    if (initial || first.startsWith("(")) return 3;                                // Wodehouse, P. G. | (Pelham Grenville)
+    return /^[«"“‘]*\p{Lu}/u.test(first) ? 0 : 2;                                 // новое предложение или «…!» said Raed
+  }
+  if (end === ":" && /^\d/u.test(first)) return 14;                            // текстов: 246
+  if (end === ";" || end === ":") return 1;
+  if (end === ",") return 2;
+  const start = CONJ.has(after) ? 3 : PREP.has(after) ? (after === "of" ? 5 : 4) : 0;
+  // английское слово в русской подписи (с if и сказуемым): правила английских служебных слов к нему не относятся
+  if (/^\p{Script=Latin}/u.test(before) && /\p{Script=Cyrillic}/u.test(first)) return start || 10;
+  if (KEEP.has(before) || (PREP.has(before) && RELATIVE.has(after)) || (VERB.has(before) && CHAIN.has(after))
+      || (CHAIN.has(before) && /^(be|been|being)$/u.test(after))) return Infinity;
+  if (PARTICLE.has(after) || (/^\p{Lu}/u.test(last) && /^\p{Lu}/u.test(first))) return 14;     // give up; Hunter Committee
+  if (OPEN.has(after) && /[,.;:!?…]$/u.test(first)) return 14;                 // наречие в конце оборота: getting on,
+  if (/^[(«"“]/u.test(first)) return 3;                                       // перед скобкой или кавычкой
+  if (/^\d/u.test(first)) return 14;                                          // spaCy 3.8.16, year 1861
+  if ((LEAN.has(before) || adjective(before)) && !start) return 14;
+  if (OPEN.has(before) && !start && !VERB.has(after)) return 14;
+  return start || (VERB.has(after) ? 4 : 10);
+}
+
+// Группы слов текста: [начало, конец, штраф за разрыв перед группой]. Слова разделены обычным пробелом.
+function groups(text) {
+  const found = [...text.matchAll(/[^ ]+/g)];
+  const gaps = found.map((m, i) => (i ? cost(found[i - 1][0], m[0]) : 0));
+  const low = found.map((m) => bare(m[0]).replace(/\.$/u, ""));
+  for (const phrase of PHRASES)
+    for (let i = 0; i + phrase.length <= low.length; i++)
+      if (phrase.every((part, k) => low[i + k] === part)) for (let k = 1; k < phrase.length; k++) gaps[i + k] = Infinity;
+  const result = [];
+  found.forEach((m, i) => {
+    const end = m.index + m[0].length;
+    if (i && gaps[i] === Infinity) result[result.length - 1][1] = end;
+    else result.push([m.index, end, gaps[i]]);
+  });
+  return result;
+}
+
+// Заполняет элемент группами слов текста. mark — [начало, конец] опорного слова, если его надо выделить.
+function fill(element, text, mark) {
+  const parts = [];
+  for (const [start, end, gap] of groups(text)) {
+    const group = document.createElement("span");
+    group.className = "w"; group.dataset.cost = gap;
+    if (mark && mark[0] < end && mark[1] > start) {
+      const a = Math.max(start, mark[0]), b = Math.min(end, mark[1]), m = document.createElement("mark");
+      m.textContent = text.slice(a, b);
+      group.append(...[text.slice(start, a), m, text.slice(b, end)].filter((part) => part !== ""));
+    } else group.textContent = text.slice(start, end);
+    if (parts.length) parts.push(" ");
+    parts.push(group);
+  }
+  element.replaceChildren(...parts);
+  schedule();
+}
+
+// Блок строки (класс s): предложение подписи, заглавие книги, английский пример. Блок, который
+// помещается в строку, переносится целиком; блок длиннее строки делится по смыслу.
+function piece(text, mark) {
+  const span = document.createElement("span");
+  span.className = "s";
+  fill(span, text, mark);
+  return span;
+}
+
+// Подпись из нескольких предложений: каждое предложение — отдельный блок, поэтому новое
+// предложение не начинается в конце строки.
+function write(element, text) {
+  const sentences = tie(text).split(/(?<=[.!?]»?) (?=[«"]?\p{Lu})/u).filter(Boolean);
+  element.replaceChildren(...sentences.flatMap((sentence, i) => (i ? [" ", piece(sentence)] : [piece(sentence)])));
+}
+
+// Выбор разрывов для блока: перебор раскладок с запоминанием лучшей для каждого начала строки.
+const EVEN = 10;     // вес неровности строк
+const ALONE = 10;    // штраф за одно слово в последней строке
+const SCRAP = 8;     // штраф за короткий обрывок оборота в конце или в начале строки
+function plan({ words, room, all, edges }) {
+  const n = words.length, best = [0], from = [0];
+  const cost = words.map((group) => Number(group.dataset.cost));
+  const left = (a) => (a ? edges[a][0] : all.left), right = (b) => (b === n ? all.right : edges[b - 1][1]);
+  for (let b = 1; b <= n; b++) {
+    best[b] = Infinity;
+    for (let a = b - 1; a >= 0; a--) {
+      const width = right(b) - left(a);
+      if (width > room && b - a > 1) break;                       // строка с этого слова уже не помещается
+      const slack = Math.max(0, room - width) / room;
+      let total = best[a] + EVEN * slack * slack + (a ? cost[a] : 0);
+      // Оборот начат внутри строки после знака препинания и продолжен на следующей: одна группа слов
+      // в конце строки (…server.py: принимается | готовый файл) или в начале (him | hungry; he had…).
+      let first = 0, last = 0;
+      for (let k = a + 1; k < b; k++) if (cost[k] <= 2) { first ||= k; last = k; }
+      if (last && last === b - 1 && b < n && cost[b] > 2) total += SCRAP;
+      if (first && first === a + 1 && a && cost[a] > 2) total += SCRAP;
+      if (b === n && a && b - a === 1 && !/[  ]/.test(words[a].textContent)) total += ALONE;
+      if (total < best[b]) { best[b] = total; from[b] = a; }
+    }
+  }
+  const starts = [];
+  for (let b = n; b > 0; b = from[b]) if (from[b]) starts.push(from[b]);
+  return starts;
+}
+
+// Раскладка всех блоков страницы. Сначала разрывы снимаются и запоминается ширина строки,
+// затем слова выстраиваются в одну строку и измеряются, затем расставляются новые разрывы
+// (класс nl: разрыв строки перед группой; класс many: блок из нескольких строк).
+function lay() {
+  const units = [...document.querySelectorAll(".s")];
+  for (const unit of units) {
+    unit.classList.remove("many");
+    for (const group of unit.querySelectorAll(".nl")) group.classList.remove("nl");
+  }
+  // Ширина строки при обычном переносе; блок, который и так стоит в одной строке, не делится.
+  const top = (rects) => (rects.length ? rects[0].top : 0);
+  const rooms = units.map((unit) => {
+    const words = unit.querySelectorAll(".w");
+    if (words.length < 2) return 0;
+    const first = [...words[0].getClientRects()], last = [...words[words.length - 1].getClientRects()].reverse();
+    return Math.abs(top(first) - top(last)) < 1 ? 0 : unit.getBoundingClientRect().width;
+  });
+  for (const unit of units) unit.classList.add("flat");
+  const sizes = units.map((unit, k) => {
+    if (!rooms[k]) return null;
+    const words = [...unit.querySelectorAll(".w")];
+    const range = document.createRange();
+    range.selectNodeContents(unit);
+    return { words, all: range.getBoundingClientRect(), room: rooms[k] - 1,     // запас в пиксель на округление
+             edges: words.map((group) => { const r = group.getBoundingClientRect(); return [r.left, r.right]; }) };
+  });
+  for (const unit of units) unit.classList.remove("flat");
+  sizes.forEach((size, k) => {
+    if (!size) return;
+    const starts = plan(size);
+    units[k].classList.toggle("many", starts.length > 0);          // блок из нескольких строк занимает строки целиком
+    for (const i of starts) size.words[i].classList.add("nl");
+  });
+}
+
+// Раскладка повторяется после вывода текста, при смене ширины и после загрузки шрифтов.
+let pending = 0;
+function schedule() {
+  if (!pending) pending = requestAnimationFrame(() => { pending = 0; lay(); });
+}
+const lower = (text) => text[0].toLowerCase() + text.slice(1);          // заголовки экранов набраны со строчной буквы
+const RINGS = '<svg class="rings" aria-hidden="true"><use href="#rings"></use></svg>';      // кольца на плитке
+
+const STEP = 10;          // сколько предложений добавляет кнопка «Ещё»
+let current = null;       // выбранная конструкция; null — открыт каталог
+let order = [];           // предложения текущей выдачи в случайном порядке
+let visible = 0;          // сколько из них показано
+let chosen = [];          // предложения, отобранные для задания
+const boxes = new Map();  // показанное предложение -> его флажок в списке
+const cardOf = {};        // номер конструкции -> её карточка
+
+// Свои тексты приходят из двух мест: из файла moya_baza.js (программа 4_dobavit.py)
+// и из памяти браузера (тексты, загруженные через форму на странице).
+// Запись о тексте: id, author, title, sentences, stages, examples — в том же виде, что в базе корпуса.
+const fileBooks = (typeof MOYA_BAZA !== "undefined" && MOYA_BAZA.books) || [];
+let savedBooks = [];
+try { savedBooks = JSON.parse(localStorage.getItem("moi-teksty") || "[]"); } catch (error) { savedBooks = []; }
+const books = () => fileBooks.concat(savedBooks.filter((b) => !fileBooks.some((f) => f.id === b.id)));
+const fromCorpus = () => $("source").value !== "own";
+const fromOwn = () => $("source").value !== "corpus";
+
+// Сведения о тексте по его номеру: [автор, заглавие, жанр]. У своих текстов жанр не указан.
+function textInfo(id) {
+  const book = books().find((b) => b.id === id);
+  return book ? [book.author, book.title, ""] : BAZA.texts[id];
+}
+
+// Сколько примеров конструкции есть в выбранном источнике.
+function baseCount(id) {
+  let n = fromCorpus() ? BAZA.stages[id].base : 0;
+  if (fromOwn()) for (const b of books()) n += b.stages[id].base;
+  return n;
+}
+
+// Числа по этапам отбора для выбранного источника: для открытой конструкции или,
+// в каталоге, для всех восьми вместе.
+function stagesNow() {
+  const ids = current ? [current.id] : CATALOG.map((c) => c.id);
+  const sum = { sentences: 0, texts: 0, found: 0, shortlisted: 0, confirmed: 0, base: 0, all_five: 0 };
+  const add = (stages, sentences, texts) => {
+    sum.sentences += sentences; sum.texts += texts;
+    for (const id of ids) for (const key in stages[id]) sum[key] += stages[id][key];
+  };
+  if (fromCorpus()) add(BAZA.stages, BAZA.corpus.sentences, BAZA.corpus.texts);
+  if (fromOwn()) for (const b of books()) add(b.stages, b.sentences, 1);
+  return sum;
+}
+
+// Поиск конструкции по запросу. Запрос делится на слова. Конструкция подходит, если
+// в запросе есть хотя бы одно её слово из списка need; каждое слово из списка more
+// добавляет балл. Выбираются конструкции с наибольшим числом баллов.
+// Короткие слова (ii, 2, if) должны совпасть целиком, остальные — с началом слова.
+// Недописанное слово из трёх и более букв тоже считается совпадением (гер → герунд):
+// так карточки отбираются по мере ввода.
+function findConstructions(query) {
+  const words = query.toLowerCase().replace(/ё/g, "е").split(/[^a-zа-я0-9]+/).filter(Boolean);
+  const hit = (key) => words.some((w) => (key.length <= 2 ? w === key
+    : w.startsWith(key) || (w.length >= 3 && key.startsWith(w))));
+  const scores = CATALOG.map((c) => (c.need.some(hit) ? 1 + c.more.filter(hit).length : 0));
+  const best = Math.max(...scores);
+  return best === 0 ? [] : CATALOG.filter((c, i) => scores[i] === best);
+}
+
+// Предложения открытой конструкции с учётом настроек.
+// Запись базы: [конструкция, номер текста, предложение, начало и конец опорного слова, длина, понятность без контекста]
+function pool() {
+  const genre = $("source").value === "own" ? "" : $("genre").value, needContext = $("context").checked;
+  let all = fromCorpus() ? BAZA.examples : [];
+  if (fromOwn()) for (const b of books()) all = all.concat(b.examples);
+  return all.filter((e) => e[0] === current.id
+    && (!needContext || e[6] === 1)
+    && (!genre || textInfo(e[1])[2] === genre));
+}
+
+// Случайный порядок: сначала по одному предложению из разных книг, затем остальные.
+function mix(list) {
+  const mixed = list.slice();
+  for (let i = mixed.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [mixed[i], mixed[j]] = [mixed[j], mixed[i]];
+  }
+  const seen = new Set(), first = [], rest = [];
+  for (const e of mixed) {
+    if (seen.has(e[1])) rest.push(e); else { seen.add(e[1]); first.push(e); }
+  }
+  return first.concat(rest);
+}
+
+// ---------- Каталог ----------
+
+function makeCards() {
+  const part = (name, ...content) => {
+    const span = document.createElement("span");
+    span.className = name; span.append(...content);
+    return span;
+  };
+  for (const c of CATALOG) {
+    const card = document.createElement("button"), title = part("t"), example = part("ex s");
+    const at = c.example.indexOf(c.word);
+    card.type = "button"; card.className = "card"; card.dataset.family = c.family;
+    write(title, c.name);
+    fill(example, c.example, [at, at + c.word.length]);
+    card.append(title, example, part("n"));                // число примеров вписывает showCards
+    card.insertAdjacentHTML("afterbegin", RINGS);
+    card.addEventListener("click", () => go(c));
+    cardOf[c.id] = card;
+    $("cards").append(card);
+  }
+}
+
+// Карточки отбираются по запросу; число примеров считается для выбранного источника.
+// Под полем поиска написано, что подошло.
+function showCards() {
+  const query = $("query").value.trim(), found = findConstructions(query);
+  for (const c of CATALOG) {
+    const card = cardOf[c.id], n = baseCount(c.id);
+    card.hidden = found.length > 0 && !found.includes(c);
+    card.disabled = n === 0;
+    card.lastChild.textContent = n ? examplesWord(n) : "примеров нет";
+  }
+  write($("note"), query === "" ? ""
+    : found.length === 0 ? "Такой конструкции в каталоге нет. Ниже все восемь."
+    : found.length > 1 ? `Подходящих конструкций: ${found.length}.`
+    : cardOf[found[0].id].disabled ? `Подходит «${found[0].name}». В выбранном источнике примеров для неё нет.`
+    : `Подходит «${found[0].name}». Нажмите Enter, чтобы открыть.`);
+}
+
+// ---------- Выдача ----------
+
+function row(e) {
+  const [, textId, sentence, start, end] = e;
+  const [author, title] = textInfo(textId);
+  const item = document.createElement("li"), pick = document.createElement("label"),
+        box = document.createElement("input"), text = document.createElement("span"),
+        source = document.createElement("p"), book = document.createElement("span"),
+        cite = document.createElement("cite");
+  pick.className = "pick"; text.className = "sentence s"; source.className = "source"; book.className = "s";
+  box.type = "checkbox"; box.checked = chosen.includes(e);
+  box.addEventListener("change", () => {
+    chosen = box.checked ? chosen.concat([e]) : chosen.filter((x) => x !== e);
+    showChosen();
+  });
+  boxes.set(e, box);
+  fill(text, sentence, [start, end]);
+  pick.append(box, text);
+  fill(cite, title);
+  book.append(cite, /[.!?]$/.test(title) ? "" : ".");
+  source.append(piece(tie(dot(author))), " ", book);
+  if (BAZA.texts[textId]) {                              // у текста корпуса есть страница книги в Project Gutenberg
+    const link = document.createElement("a");
+    link.href = "https://www.gutenberg.org/ebooks/" + textId;
+    link.target = "_blank"; link.rel = "noopener";
+    link.textContent = "Открыть книгу";
+    link.title = "Текст книги в Project Gutenberg";
+    source.append(" ", link);
+  }
+  item.append(pick, source);
+  return item;
+}
+
+// Добавляет к списку следующие десять предложений.
+function showMore() {
+  const next = order.slice(visible, visible + STEP);
+  $("list").append(...next.map(row));
+  visible += next.length;
+  const left = Math.min(STEP, order.length - visible);
+  write($("count"), order.length ? `Показано ${visible} из ${number(order.length)}` : "С такими настройками примеров нет");
+  $("more").hidden = left <= 0;
+  $("more").textContent = `Показать ещё ${left}`;
+  showChosen();
+}
+
+// Новая выдача: при входе в конструкцию и при смене настроек.
+function newOrder() {
+  order = mix(pool()); visible = 0; boxes.clear();
+  $("list").replaceChildren();
+  $("copybox").hidden = true;
+  showMore();
+}
+
+// ---------- Для задания ----------
+
+function showChosen() {
+  const n = chosen.length;
+  $("chosencount").textContent = n ? sentencesWord(n) : "";
+  write($("emptyhint"), `Отметьте предложения в списке. Пока ничего не отмечено, копируются все показанные: ${visible}.`);
+  $("emptyhint").hidden = n > 0;
+  $("clear").hidden = n === 0;
+  $("copy").disabled = n === 0 && visible === 0;
+  $("chosen").replaceChildren(...chosen.map((e) => {
+    const item = document.createElement("li"), line = document.createElement("div"),
+          text = document.createElement("span"), remove = document.createElement("button");
+    text.className = "s"; fill(text, e[2]);
+    remove.type = "button"; remove.textContent = "×"; remove.setAttribute("aria-label", "Убрать из задания");
+    remove.addEventListener("click", () => { chosen = chosen.filter((x) => x !== e); showChosen(); });
+    line.append(text, remove); item.append(line);
+    return item;
+  }));
+  for (const [e, box] of boxes) box.checked = chosen.includes(e);
+}
+
+// Текст для копирования: отмеченные предложения или, если ничего не отмечено, все показанные.
+function copyText() {
+  const list = chosen.length ? chosen : order.slice(0, visible);
+  const lines = list.map((e, i) => {
+    const sentence = $("gap").checked ? e[2].slice(0, e[3]) + "______" + e[2].slice(e[4]) : e[2];
+    const [author, title] = textInfo(e[1]) || ["", ""];
+    return `${i + 1}. ${sentence}` + ($("credit").checked ? ` (${author}. ${title})` : "");
+  });
+  const same = list.every((e) => e[0] === list[0][0]);       // заголовок ставится, если конструкция одна
+  return (same ? CATALOG.find((c) => c.id === list[0][0]).name + "\n\n" : "") + lines.join("\n");
+}
+
+function copy() {
+  const text = copyText();
+  const fallback = () => {            // если буфер обмена недоступен, текст показывается для ручного копирования
+    const box = $("copybox");
+    box.value = text; box.hidden = false; box.focus(); box.select();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      $("copy").textContent = "Скопировано";
+      setTimeout(() => { $("copy").textContent = "Скопировать"; }, 1500);
+    }, fallback);
+  } else fallback();
+}
+
+// ---------- Как отобраны примеры ----------
+
+// Путь отбора: название этапа, пояснение, число предложений (числа записаны в базе при сборке).
+function showSteps() {
+  const s = stagesNow();
+  const where = { corpus: "корпус Project Gutenberg", own: "мои тексты", all: "корпус и мои тексты" }[$("source").value];
+  const rows = [
+    ["Предложений в текстах", `${where}; текстов: ${s.texts}`, s.sentences],
+    ["Правило нашло конструкцию", "быстрая модель анализатора; предложения от 4 до 60 токенов", s.found],
+    ["Длина от 8 до 25 токенов, целое предложение", "с прописной буквы, с конечным знаком, без знаков разметки, кавычки и скобки парные", s.shortlisted],
+    ["Конструкция подтверждена", "точная модель анализатора, то же правило", s.confirmed],
+    ["База сервиса", "слова из 10 000 самых частотных, у сказуемого есть подлежащее", s.base],
+    ["Понятны без контекста", "среди первых трёх слов нет местоимения без предшествующего существительного", s.all_five],
+  ];
+  write($("pathfor"), (current ? `Числа для конструкции «${current.name}».` : "Числа по всем восьми конструкциям.")
+    + " Каждая строка сужает предыдущую.");
+  $("steps").replaceChildren(...rows.map(([label, hint, value]) => {
+    const li = document.createElement("li"), text = document.createElement("span"),
+          small = document.createElement("small"), b = document.createElement("b");
+    write(small, hint); b.textContent = number(value);
+    text.append(piece(tie(label)), small);
+    li.append(text, b);
+    return li;
+  }));
+}
+
+// ---------- Экраны ----------
+
+// Показывает каталог (c равно null) или выдачу конструкции c.
+function show(c) {
+  current = c;
+  for (const el of document.querySelectorAll("[data-view]")) el.hidden = (el.dataset.view === "result") !== Boolean(c);
+  if (c) showOwn(false);
+  else $("query").value = "";                       // в каталоге снова видны все карточки
+  $("page").dataset.family = c ? c.family : "";      // цвет группы: полоса заголовка, опорное слово, отмеченные строки
+  $("hero").classList.toggle("band", Boolean(c));
+  write($("name"), c ? lower(c.name) : "какую конструкцию отрабатываем?");
+  write($("signs"), c ? `${c.signs} Английское название: ${c.en}.`
+    : "Предложения из книг с автором и заглавием. Введите название конструкции или выберите её в каталоге.");
+  refresh();
+  window.scrollTo(0, 0);
+}
+
+// Обновляет экран после смены источника или состава своих текстов.
+function refresh() {
+  $("genrebox").hidden = !current || $("source").value === "own";      // у своих текстов жанр не указан
+  if (current) newOrder(); else showCards();
+  showSteps();
+}
+
+// Адрес страницы запоминает экран (#k2 — выдача конструкции 2), поэтому работает кнопка браузера «Назад».
+const fromHash = () => CATALOG.find((c) => location.hash === "#k" + c.id) || null;
+function go(c) {
+  show(c);
+  try { history.pushState(null, "", c ? "#k" + c.id : "#"); } catch (error) { /* адрес менять нельзя; экран уже показан */ }
+  $("name").focus();
+}
+
+// ---------- Своя книга ----------
+
+// Список своих текстов и состав списка источников. Тексты из памяти браузера можно убрать.
+function showBooks() {
+  const list = books(), select = $("source"), value = list.length ? select.value || "corpus" : "corpus";
+  const option = (key, text) => { const o = document.createElement("option"); o.value = key; o.textContent = text; return o; };
+  select.replaceChildren(
+    option("corpus", `Корпус: ${BAZA.corpus.texts} ${plural(BAZA.corpus.texts, "книга", "книги", "книг")}`),
+    ...(list.length ? [option("own", `Мои тексты: ${list.length}`), option("all", "Все источники")] : []));
+  select.value = value;
+  $("books").replaceChildren(...list.map((b) => {
+    const li = document.createElement("li"), text = document.createElement("span");
+    text.append(piece(`${dot(tie(b.author))} ${dot(b.title)}`), " ",
+                piece(tie(`Предложений: ${number(b.sentences)}, примеров: ${number(b.examples.length)}.`)));
+    li.append(text);
+    if (savedBooks.includes(b)) {
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.textContent = "Убрать";
+      remove.addEventListener("click", () => { keep(savedBooks.filter((x) => x !== b)); showBooks(); refresh(); });
+      li.append(remove);
+    }
+    return li;
+  }));
+}
+
+function keep(list) {
+  savedBooks = list;
+  try { localStorage.setItem("moi-teksty", JSON.stringify(list)); } catch (error) { /* память браузера недоступна: тексты живут до закрытия страницы */ }
+}
+
+function tell(text) { write($("ustatus"), text); $("ustatus").hidden = !text; }
+
+// Форма своей книги открывается и сворачивается одной кнопкой. Пока форма свёрнута, кнопка
+// главная (с заливкой) и зовёт добавить книгу; при открытой форме главная кнопка — «Добавить» в форме.
+function showOwn(open) {
+  $("own").hidden = !open;
+  $("ownbutton").setAttribute("aria-expanded", String(open));
+  $("ownbutton").classList.toggle("main", !open);
+  $("ownbutton").firstElementChild.toggleAttribute("hidden", open);       // знак «плюс»
+  $("ownname").textContent = open ? "Свернуть форму" : "Добавить свою книгу";
+}
+
+// Книгу (.txt, .epub) размечает программа server.py: форма отправляет ей файл.
+// Страница ищет программу в двух местах: по адресу самой страницы (её отдаёт server.py)
+// и по адресу из файла nastroyki.js (страница лежит на GitHub Pages, server.py работает
+// на другом компьютере за туннелем). Без программы страница принимает готовый файл
+// примеров moya_baza.js (его создаёт 4_dobavit.py).
+// Адрес без https:// дополняется: иначе браузер принял бы его за путь на сайте самой страницы.
+const REMOTE = ((address) => (address && !/^https?:\/\//i.test(address) ? "https://" + address : address))(
+  typeof SERVER_RAZMETKI === "string" ? SERVER_RAZMETKI.trim().replace(/\/+$/, "") : "");
+// Туннель tuna на бесплатном тарифе показывает браузерам страницу «Требуется подтверждение»
+// вместо ответа программы. Этот заголовок её пропускает; server.py его разрешает (CORS).
+const TUNNEL = { "tuna-skip-browser-warning": "1" };
+let server = null;        // начало адреса, по которому ответил server.py ("" — адрес страницы); null — не найден
+
+// Ищет server.py; ответ «сервер на месте» — запрос sostoyanie вернул {"server": true}.
+async function findServer() {
+  const places = (location.protocol.startsWith("http") ? [""] : []).concat(REMOTE ? [REMOTE + "/"] : []);
+  let found = null;
+  for (const base of places) {
+    try {
+      const wait = typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(8000) : undefined;
+      const response = await fetch(base + "sostoyanie", { cache: "no-store", signal: wait, headers: TUNNEL });
+      const state = response.ok ? await response.json().catch(() => null) : null;
+      if (state && state.server) { found = base; break; }
+    } catch (error) { /* по этому адресу программы нет */ }
+  }
+  server = found;
+  showHint();
+  return found !== null;
+}
+
+// Что форма принимает сейчас: книгу (сервер найден) или только готовый файл примеров.
+const offline = () => REMOTE
+  ? "Сервер разметки книг сейчас выключен. Можно загрузить готовый файл примеров moya_baza.js или попробовать позже."
+  : "Страница открыта без программы server.py: принимается готовый файл примеров moya_baza.js.";
+
+function showHint() {
+  const file = $("file").files[0];
+  if (file) $("filename").textContent = file.name;
+  else write($("filename"), server !== null
+    ? "Книга на английском: .txt или .epub, до 5 МБ. Сервер файл не сохраняет, примеры остаются в этом браузере."
+    : offline());
+}
+
+function addBooks(list) {
+  keep(savedBooks.filter((b) => !list.some((x) => x.id === b.id)).concat(list));
+  showBooks();
+  $("source").value = "own";
+  refresh();
+}
+
+// Готовый файл примеров: в нём записан список текстов в том же виде, что в moya_baza.js.
+async function readExamplesFile(file) {
+  const text = await file.text();
+  const list = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)).books;
+  if (!Array.isArray(list) || !list.every((b) => b.id && b.stages && Array.isArray(b.examples))) throw new Error();
+  return list;
+}
+
+async function sendFile(event) {
+  event.preventDefault();
+  const file = $("file").files[0];
+  if (!file) { tell("Выберите файл."); return; }
+  if (/\.(js|json)$/i.test(file.name)) {
+    try {
+      const list = await readExamplesFile(file);
+      if (list.length) { addBooks(list); tell(`Готово. Текстов в файле: ${list.length}.`); }
+      else tell("В этом файле нет текстов. Добавьте книгу программой 4_dobavit.py и загрузите файл снова.");
+    } catch (error) {
+      tell("Это не файл примеров. Нужен moya_baza.js, созданный программой 4_dobavit.py.");
+    }
+    return;
+  }
+  $("send").disabled = true;
+  if (server === null) {                      // сервер могли включить после открытия страницы
+    tell("Проверяется сервер разметки…");
+    if (!(await findServer())) {
+      tell(REMOTE ? "Сервер разметки книг сейчас выключен. Попробуйте позже или загрузите готовый файл примеров moya_baza.js."
+        : "Книгу размечает программа server.py, а страница открыта без неё. Запустите server.py и откройте http://localhost:8000 либо загрузите готовый файл moya_baza.js.");
+      $("send").disabled = false;
+      return;
+    }
+  }
+  tell("Текст размечается. Обычно это занимает до минуты, для книги около 4 МБ — до полутора минут.");
+  try {
+    const response = await fetch(server + "obrabotat", { method: "POST", body: file, headers: { ...TUNNEL,
+      "X-Name": encodeURIComponent(file.name),
+      "X-Author": encodeURIComponent($("author").value.trim()),
+      "X-Title": encodeURIComponent($("title").value.trim()) } });
+    // Хостинг может ответить своей страницей ошибки или ожидания вместо ответа сервиса: такой ответ не в JSON.
+    const book = await response.json().catch(() => null);
+    if (!response.ok || !book || book.error)
+      throw new Error((book && book.error) || `Сервер не обработал книгу (ответ ${response.status}). Попробуйте ещё раз через минуту.`);
+    addBooks([book]);
+    tell(`Готово. Предложений в тексте: ${number(book.sentences)}, примеров: ${number(book.examples.length)}.`);
+  } catch (error) {
+    // Ошибка сети (TypeError) приходит с английским текстом браузера: вместо него — понятное сообщение.
+    // Сервер мог выключиться: подсказка под полем файла обновляется.
+    if (error instanceof TypeError || !error.message) {
+      tell("Сервер не ответил. Проверьте подключение и попробуйте ещё раз; если сервис запущен на этом компьютере, проверьте, что программа server.py работает.");
+      findServer();
+    } else tell(error.message);
+  }
+  $("send").disabled = false;
+}
+
+function startOwnTexts() {
+  showBooks();
+  showHint();
+  findServer();
+  $("ownbutton").addEventListener("click", () => {
+    const open = $("own").hidden;
+    showOwn(open);
+    if (open && server === null) findServer();         // сервер могли включить после открытия страницы
+  });
+  const drop = $("drop");
+  drop.addEventListener("dragover", (event) => { event.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", (event) => {
+    event.preventDefault(); drop.classList.remove("over");
+    if (event.dataTransfer.files.length) { $("file").files = event.dataTransfer.files; showHint(); }
+  });
+  $("file").addEventListener("change", showHint);
+  $("upload").addEventListener("submit", sendFile);
+}
+
+// ---------- Тема ----------
+
+// Без выбора тема берётся из системы. Кнопка переключает тему и запоминает выбор в браузере.
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+const themeNow = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
+
+function showTheme() {
+  const dark = themeNow() === "dark";
+  $("themename").textContent = dark ? "Светлая тема" : "Тёмная тема";
+  $("sun").toggleAttribute("hidden", !dark);
+  $("moon").toggleAttribute("hidden", dark);
+}
+
+function switchTheme() {
+  const next = themeNow() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("tema", next); } catch (error) { /* память браузера недоступна: выбор действует до закрытия страницы */ }
+}
+
+// ---------- Запуск ----------
+
+function start() {
+  // Статичные подписи страницы проходят через tie() один раз, до показа данных.
+  const labels = document.createTreeWalker($("page"), NodeFilter.SHOW_TEXT);
+  while (labels.nextNode()) labels.currentNode.data = tie(labels.currentNode.data);
+  write($("about"), $("about").textContent);              // пояснение из нескольких предложений
+  const brand = document.querySelector(".brand").lastChild;               // название сервиса после рисунка
+  brand.replaceWith(piece(brand.data.trim()));
+  for (const label of document.querySelectorAll(".check")) {             // подписи флажков
+    const text = label.lastChild;
+    text.replaceWith(piece(text.data.trim()));
+  }
+  // Разбивка повторяется при смене ширины страницы, панели и списка отобранных и после загрузки шрифтов.
+  const watch = new ResizeObserver(schedule);
+  for (const id of ["page", "panel", "chosen"]) watch.observe($(id));
+  if (document.fonts) { document.fonts.ready.then(schedule); document.fonts.addEventListener("loadingdone", schedule); }
+  showTheme();
+  $("theme").addEventListener("click", switchTheme);
+  systemDark.addEventListener("change", showTheme);
+  // Подпись кнопки следует за темой страницы, кто бы её ни сменил: кнопка или окно, в котором страница показана.
+  new MutationObserver(showTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (typeof BAZA === "undefined") {
+    write($("name"), "Сервис примеров из корпуса");
+    write($("signs"), "Не найден файл baza.js. Он должен лежать в одной папке со страницей.");
+    $("bar").hidden = true; $("note").parentElement.hidden = true;
+    return;
+  }
+  makeCards();
+  startOwnTexts();
+  $("query").addEventListener("input", showCards);
+  $("query").addEventListener("keydown", (event) => {         // Enter открывает единственную подошедшую карточку
+    const found = findConstructions($("query").value);
+    if (event.key === "Enter" && found.length === 1 && !cardOf[found[0].id].disabled) go(found[0]);
+  });
+  $("back").addEventListener("click", () => go(null));
+  $("source").addEventListener("change", refresh);
+  for (const id of ["genre", "context"]) $(id).addEventListener("change", newOrder);
+  $("more").addEventListener("click", showMore);
+  $("copy").addEventListener("click", copy);
+  $("clear").addEventListener("click", () => { chosen = []; showChosen(); });
+  $("toggle").addEventListener("click", () => {                // на узком экране панель разворачивается по кнопке
+    const open = $("panel").classList.toggle("open");
+    $("toggle").textContent = open ? "Свернуть" : "Показать";
+    $("toggle").setAttribute("aria-expanded", String(open));
+  });
+  $("howlink").addEventListener("click", (event) => {
+    event.preventDefault();
+    $("how").open = true;
+    $("how").scrollIntoView();
+  });
+  window.addEventListener("popstate", () => show(fromHash()));
+  write($("built"), `База собрана ${BAZA.built.split("-").reverse().join(".")}. Примеров в базе: ${number(BAZA.examples.length)}, текстов: ${number(Object.keys(BAZA.texts).length)}. ${BAZA.analyzer}.`);
+  show(fromHash());
+}
+start();
+</script>
+</body>
+</html>
