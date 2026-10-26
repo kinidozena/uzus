@@ -132,8 +132,23 @@ input[type="checkbox"] { accent-color: var(--ink); width: 1.25rem; height: 1.25r
 .hero.band { display: block; position: relative; overflow: hidden; padding: 1.4rem 1.6rem 1.6rem; border-radius: 1.5rem;
              background: var(--hue); color: var(--tile-ink); }
 .hero.band > .rings { display: block; position: absolute; right: -5.25rem; top: -4rem; width: 21rem; height: 21rem; }
-.hero.band .hero-text { position: relative; max-width: 42rem; }
+.hero.band .hero-text { position: relative; max-width: 46rem; }
 .hero.band .lead { color: var(--tile-ink); }
+/* Описание конструкции в выдаче: что ищет сервис, что в конструкцию не входит, английское название.
+   Карточка цвета страницы на полосе группы: длинный текст читается на белом (в тёмной теме — на тёмном).
+   Подписи слева, на узком экране — над текстом. Английские слова и примеры набраны курсивом. */
+.about { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: 0.85rem 1.5rem;
+         width: 100%; margin: 0.4rem 0 0; padding: 1.1rem 1.35rem 1.2rem; border-radius: 1.1rem;
+         background: var(--surface); color: var(--ink); font-size: 1.0625rem; line-height: 1.55; }
+.about dt { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.about dd { margin: 0; min-width: 0; }
+.about ul { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.about li::marker { color: var(--muted); }
+.about i.whole { white-space: nowrap; }
+@media (max-width: 40rem) {
+  .about { grid-template-columns: minmax(0, 1fr); gap: 0.15rem; padding: 1rem 1.1rem 1.1rem; }
+  .about dd:not(:last-child) { margin-bottom: 0.8rem; }
+}
 .hero.band #back { background: var(--tile-paper); color: var(--tile-ink); border-color: var(--tile-ink); padding-left: 0.7rem; }
 .hero.band #back:hover { opacity: 0.86; }
 .hero.band :focus-visible { outline-color: var(--tile-ink); }
@@ -308,7 +323,12 @@ try {
           Каталог
         </button>
         <h1 id="name" tabindex="-1"></h1>
-        <p class="lead" id="signs"></p>
+        <p class="lead" id="signs" data-view="catalog"></p>
+        <dl class="about" data-view="result" hidden>
+          <dt>Что ищет сервис</dt><dd id="aboutsigns"></dd>
+          <dt id="aboutnothead">Не входит</dt><dd id="aboutnot"></dd>
+          <dt>По-английски</dt><dd id="abouten" lang="en"></dd>
+        </dl>
       </div>
       <div class="search" data-view="catalog">
         <label class="field">
@@ -432,7 +452,8 @@ try {
 // из файла katalog.py. У конструкции:
 //   id — код (1–8 — конструкции статьи; Г1, Т16 и т. д. — добавленные 24.10.2026), slug — код в адресе (#kg1);
 //   section, family — раздел каталога и группа цвета (цвет плитки и экрана выдачи);
-//   name, en — название по-русски и по-английски; signs — формальный признак; not — что в конструкцию не входит;
+//   name, en — название по-русски и по-английски; signs — что ищет сервис; not — список случаев, которые
+//     в конструкцию не входят (английские слова в signs и not отмечены *так*);
 //   example, mark — пример для плитки и начало и конец выделенного в нём слова. Примеры взяты из базы
 //     и выбраны вручную как иллюстрации; в выдачу предложения попадают только через правила и требования;
 //   keys — слова для поиска сверх слов названий и раздела; reading — итоги проверки чтением
@@ -1075,9 +1096,32 @@ function showSteps() {
 
 // ---------- Экраны ----------
 
-// Заголовок выдачи и «Не входит: …» начинаются со строчной буквы, если первое слово русское;
+// Заголовок выдачи начинается со строчной буквы, если первое слово русское;
 // английские названия (Present Perfect, If only) остаются как есть.
 const lowerRu = (text) => (/^[А-ЯЁ]/.test(text) ? lower(text) : text);
+
+// Текст описания: английские слова и примеры отмечены в каталоге *так* и набираются курсивом.
+function rich(element, text) {
+  element.replaceChildren(...tie(text).split(/\*([^*]+)\*/).map((part, i) => {
+    if (i % 2 === 0) return part;
+    const en = document.createElement("i");
+    en.lang = "en"; en.textContent = part;
+    if (part.length <= 24 && !part.includes(",")) en.className = "whole";     // короткий пример не делится между строками
+    return en;
+  }).filter((part) => part !== ""));
+}
+
+// Описание конструкции под заголовком выдачи: что ищет сервис, что не входит (списком), английское название.
+// В базах до 26.10.2026 «не входит» — одна строка, случаи разделены точкой с запятой.
+function describe(c) {
+  rich($("aboutsigns"), c.signs);
+  const list = Array.isArray(c.not) ? c.not : (c.not || "").split(/;\s+/).filter(Boolean);
+  $("aboutnothead").hidden = $("aboutnot").hidden = !list.length;
+  const ul = document.createElement("ul");
+  ul.append(...list.map((item) => { const li = document.createElement("li"); rich(li, item.replace(/\.$/, "")); return li; }));
+  $("aboutnot").replaceChildren(ul);
+  $("abouten").textContent = c.en;
+}
 
 // Показывает каталог (c равно null) или выдачу конструкции c.
 function show(c) {
@@ -1088,8 +1132,8 @@ function show(c) {
   $("page").dataset.family = c ? c.family : "";      // цвет группы: полоса заголовка, опорное слово, отмеченные строки
   $("hero").classList.toggle("band", Boolean(c));
   write($("name"), c ? lowerRu(c.name) : "какую конструкцию отрабатываем?");   // английское название остаётся как есть
-  write($("signs"), c ? `${c.signs}${c.not ? ` Не входит: ${lowerRu(c.not)}` : ""} Английское название: ${c.en}.`
-    : `Предложения из книг с автором и заглавием: ${CATALOG.length} ${plural(CATALOG.length, "конструкция", "конструкции", "конструкций")} в ${SECTIONS.length} разделах. `
+  if (c) describe(c);
+  else write($("signs"), `Предложения из книг с автором и заглавием: ${CATALOG.length} ${plural(CATALOG.length, "конструкция", "конструкции", "конструкций")} в ${SECTIONS.length} разделах. `
       + "Введите название конструкции или выберите её в каталоге.");
   refresh();
   window.scrollTo(0, 0);
